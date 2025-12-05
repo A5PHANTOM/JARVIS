@@ -19,6 +19,7 @@ from .gpt_client import get_plan
 from .script_generator import generate_script
 from .executor import execute_script
 from .safety import is_safe
+from .retriever import get_structured_hotkeys
 
 app = FastAPI(title="Jarvis-AI Backend (Gemini 1.5 Edition)")
 
@@ -54,18 +55,45 @@ def handle_command(req: CommandRequest):
     # Get plan from Gemini-based automation planner
     plan = get_plan(req.text)
 
-    # Quick override: if user asks to "start coding" treat as open_app -> Visual Studio Code
-    # This helps when Gemini returns a chat reply for casual phrases like "let's start coding"
+    # Attach structured hotkey guidance from local KB when available
     try:
-        user_low = (req.text or "").strip().lower()
-        if plan.intent == "chat" and ("start coding" in user_low or "lets start coding" in user_low or "let's start coding" in user_low):
-            # convert to an automation plan to open VS Code
-            plan.intent = "open_app"
-            plan.actions = ["Open Visual Studio Code"]
-            # Provide both a platform app_name and a generic app_id so generators can pick the right command
-            plan.arguments = {"app_name": "Visual Studio Code", "app_id": "vscode"}
+        structured = get_structured_hotkeys(req.text, platform=req.platform)
+        if structured:
+            if not hasattr(plan, "arguments") or plan.arguments is None:
+                plan.arguments = {}
+            plan.arguments["hotkeys"] = structured
     except Exception:
-        # keep original plan on any unexpected error
+        pass
+
+    # If Gemini returned a chat intent but the local KB matched a concrete
+    # automation entry, convert the plan into a simple automation plan so
+    # the local hotkeys are executed. This improves reliability for short
+    # trigger phrases that Gemini might treat as chat.
+    try:
+        if plan.intent == "chat" and plan.arguments and plan.arguments.get("hotkeys"):
+            hk = plan.arguments.get("hotkeys")
+            # infer simple intent from hotkey items
+            if any(item.get("type") == "open_url" for item in hk):
+                plan.intent = "open_website"
+                # choose first open_url
+                for item in hk:
+                    if item.get("type") == "open_url":
+                        plan.arguments = plan.arguments or {}
+                        plan.arguments["url"] = item.get("url")
+                        plan.actions = ["Open browser", f"Go to {item.get('url')}"]
+                        break
+            elif any(item.get("type") == "activate_app" for item in hk):
+                plan.intent = "open_app"
+                for item in hk:
+                    if item.get("type") == "activate_app":
+                        plan.arguments = plan.arguments or {}
+                        plan.arguments["app_name"] = item.get("app")
+                        plan.actions = [f"Open {item.get('app')}"]
+                        break
+            elif any(item.get("type") == "run" for item in hk):
+                plan.intent = "open_app"
+                plan.actions = [s.get("cmd") for s in hk if s.get("type") == "run"]
+    except Exception:
         pass
     safe, reason = is_safe(plan)
 
@@ -95,8 +123,11 @@ def handle_command(req: CommandRequest):
     script_path = gen_info.get("script_path")
 
     if script_path:
-        execute_script(script_path, target_platform)
-        msg = "Command executed successfully."
+        if getattr(req, "execute", True):
+            execute_script(script_path, target_platform)
+            msg = "Command executed successfully."
+        else:
+            msg = "Command generated (not executed)."
     else:
         msg = "No script generated (unsupported platform)."
 

@@ -1,0 +1,31 @@
+{
+  "entries": [
+    {
+      "id": "open_chrome_gmail",
+      "keywords": ["chrome", "gmail", "mail"],
+      "platforms": {
+        "mac": [
+          { "type": "activate_app", "app": "Google Chrome" },
+          { "type": "open_url", "url": "https://mail.google.com" }
+        ],
+        "windows": [
+          { "type": "run", "cmd": "https://mail.google.com" }
+        ]
+      },
+      "summary": "Open Google Chrome and navigate to Gmail"
+    },
+    {
+      "id": "open_vscode",
+      "keywords": ["start coding", "vscode", "visual studio code"],
+      "platforms": {
+        "mac": [
+          { "type": "activate_app", "app": "Visual Studio Code" }
+        ],
+        "windows": [
+          { "type": "run", "cmd": "code" }
+        ]
+      },
+      "summary": "Open Visual Studio Code"
+    }
+  ]
+}

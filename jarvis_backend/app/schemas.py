@@ -4,6 +4,8 @@ from typing import List, Optional
 class CommandRequest(BaseModel):
     text: str
     platform: Optional[str] = None
+    # When false, backend should generate a plan and return it but NOT execute scripts.
+    execute: Optional[bool] = True
 
 class CommandResponse(BaseModel):
     message: str

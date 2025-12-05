@@ -11,3 +11,63 @@
 10:55:54 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
 10:58:59 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
 10:59:05 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:27:04 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:27:41 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:27:49 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:31:36 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:31:59 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:32:11 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:35:18 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:35:18 pm [vite] Internal server error: /Users/mac/Desktop/AVENTRON/frontend/src/App.jsx: 'return' outside of function. (7:15)
+
+   5 | const COMMAND_URL = `${BASE_URL}/command`;
+   6 | const CHAT_URL = `${BASE_URL}/chat`;
+>  7 |     if (!text) return;
+     |                ^
+   8 |     if (isMuted) return;
+   9 |     if (!("speechSynthesis" in window)) return;
+  10 |
+  Plugin: vite:react-babel
+  File: /Users/mac/Desktop/AVENTRON/frontend/src/App.jsx:7:15
+  5  |  const COMMAND_URL = `${BASE_URL}/command`;
+  6  |  const CHAT_URL = `${BASE_URL}/chat`;
+  7  |      if (!text) return;
+     |                 ^
+  8  |      if (isMuted) return;
+  9  |      if (!("speechSynthesis" in window)) return;
+      at constructor (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:367:19)
+      at JSXParserMixin.raise (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:6624:19)
+      at JSXParserMixin.parseReturnStatement (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:13212:12)
+      at JSXParserMixin.parseStatementContent (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:12874:21)
+      at JSXParserMixin.parseStatementLike (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:12843:17)
+      at JSXParserMixin.parseStatementOrSloppyAnnexBFunctionDeclaration (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:12833:17)
+      at JSXParserMixin.parseIfStatement (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:13206:28)
+      at JSXParserMixin.parseStatementContent (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:12872:21)
+      at JSXParserMixin.parseStatementLike (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:12843:17)
+      at JSXParserMixin.parseModuleItem (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:12820:17)
+      at JSXParserMixin.parseBlockOrModuleBlockBody (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:13392:36)
+      at JSXParserMixin.parseBlockBody (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:13385:10)
+      at JSXParserMixin.parseProgram (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:12698:10)
+      at JSXParserMixin.parseTopLevel (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:12688:25)
+      at JSXParserMixin.parse (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:14568:25)
+      at parse (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/parser/lib/index.js:14602:38)
+      at parser (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+      at parser.next (<anonymous>)
+      at normalizeFile (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+      at normalizeFile.next (<anonymous>)
+      at run (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+      at run.next (<anonymous>)
+      at transform (/Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+      at transform.next (<anonymous>)
+      at step (/Users/mac/Desktop/AVENTRON/frontend/node_modules/gensync/index.js:261:32)
+      at /Users/mac/Desktop/AVENTRON/frontend/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/Users/mac/Desktop/AVENTRON/frontend/node_modules/gensync/index.js:223:11)
+      at /Users/mac/Desktop/AVENTRON/frontend/node_modules/gensync/index.js:189:28
+      at /Users/mac/Desktop/AVENTRON/frontend/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+      at /Users/mac/Desktop/AVENTRON/frontend/node_modules/gensync/index.js:113:33
+      at step (/Users/mac/Desktop/AVENTRON/frontend/node_modules/gensync/index.js:287:14)
+      at /Users/mac/Desktop/AVENTRON/frontend/node_modules/gensync/index.js:273:13
+      at async.call.result.err.err (/Users/mac/Desktop/AVENTRON/frontend/node_modules/gensync/index.js:223:11)
+11:36:44 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:37:21 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
+11:40:17 pm [vite] (client) hmr update /src/App.jsx, /src/index.css
