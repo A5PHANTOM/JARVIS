@@ -5,6 +5,13 @@ import os
 import requests
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv(), override=True)
+try:
+    # optional imports for service-account auth in chat endpoint
+    from google.oauth2 import service_account
+    from google.auth.transport.requests import Request as GoogleRequest
+    _HAS_GOOGLE_AUTH = True
+except Exception:
+    _HAS_GOOGLE_AUTH = False
 
 
 from .schemas import CommandRequest, CommandResponse
@@ -46,6 +53,20 @@ def handle_command(req: CommandRequest):
 
     # Get plan from Gemini-based automation planner
     plan = get_plan(req.text)
+
+    # Quick override: if user asks to "start coding" treat as open_app -> Visual Studio Code
+    # This helps when Gemini returns a chat reply for casual phrases like "let's start coding"
+    try:
+        user_low = (req.text or "").strip().lower()
+        if plan.intent == "chat" and ("start coding" in user_low or "lets start coding" in user_low or "let's start coding" in user_low):
+            # convert to an automation plan to open VS Code
+            plan.intent = "open_app"
+            plan.actions = ["Open Visual Studio Code"]
+            # Provide both a platform app_name and a generic app_id so generators can pick the right command
+            plan.arguments = {"app_name": "Visual Studio Code", "app_id": "vscode"}
+    except Exception:
+        # keep original plan on any unexpected error
+        pass
     safe, reason = is_safe(plan)
 
     # 🚫 Safety check
@@ -97,19 +118,45 @@ def chat_endpoint(req: CommandRequest):
     """
     user_text = req.text
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 
-    # 🧠 If API key exists, use Gemini 1.5 Flash (free)
-    if GEMINI_API_KEY:
+    # prefer service-account bearer token if available
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+
+    google_creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    headers = {"Content-Type": "application/json"}
+    request_url = gemini_url
+    used_bearer = False
+
+    if google_creds_path and _HAS_GOOGLE_AUTH:
         try:
-            gemini_url = (
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+            creds = service_account.Credentials.from_service_account_file(
+                google_creds_path,
+                scopes=["https://www.googleapis.com/auth/cloud-platform"],
             )
+            creds.refresh(GoogleRequest())
+            headers["Authorization"] = f"Bearer {creds.token}"
+            used_bearer = True
+        except Exception as e:
+            print("[chat] failed to obtain bearer token:", repr(e))
+
+    if not used_bearer:
+        if not GEMINI_API_KEY:
+            # fall back to offline responses below
+            GEMINI_API_KEY = ""
+        else:
+            request_url = f"{gemini_url}?key={GEMINI_API_KEY}"
+
+    if used_bearer or GEMINI_API_KEY:
+        try:
             response = requests.post(
-                f"{gemini_url}?key={GEMINI_API_KEY}",
-                headers={"Content-Type": "application/json"},
+                request_url,
+                headers=headers,
                 json={"contents": [{"parts": [{"text": user_text}]}]},
                 timeout=20,
             )
+            if response.status_code != 200:
+                print(f"[chat] Gemini API returned status {response.status_code}: {response.text}")
             data = response.json()
             msg = (
                 data.get("candidates", [{}])[0]

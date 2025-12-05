@@ -6,9 +6,17 @@ def execute_script(path: str, target_platform: str):
         return
 
     if target_platform == "windows":
-        # ✅ Use full path to AutoHotkey executable
-        ahk_path = r"D:\AutoHotkey\v2\AutoHotkey64.exe"
-        subprocess.Popen([ahk_path, path])
+        # Try to execute the AHK script. Prefer using AutoHotkey executable if present,
+        # otherwise fall back to 'start' which will use file associations on Windows.
+        try:
+            ahk_path = r"D:\AutoHotkey\v2\AutoHotkey64.exe"
+            if os.path.exists(ahk_path):
+                subprocess.Popen([ahk_path, path])
+            else:
+                # Use cmd start to launch the script by association
+                subprocess.Popen(["cmd", "/c", "start", "", path])
+        except Exception as e:
+            print("Failed to execute Windows script:", repr(e))
     elif target_platform == "mac":
         subprocess.Popen(["osascript", path])
     else:

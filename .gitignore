@@ -1,0 +1,12 @@
+# Ignore local environment and secrets
+jarvis_backend/.env
+
+# Node modules
+frontend/node_modules/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/

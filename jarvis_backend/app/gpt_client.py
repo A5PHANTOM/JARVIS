@@ -5,9 +5,20 @@ load_dotenv(find_dotenv(), override=True)
 import os
 import requests
 from .schemas import Plan
+import re
+
+# Optional google-auth imports for service-account / bearer-token flow
+try:
+    from google.oauth2 import service_account
+    from google.auth.transport.requests import Request as GoogleRequest
+    _HAS_GOOGLE_AUTH = True
+except Exception:
+    _HAS_GOOGLE_AUTH = False
 
 # Load Gemini API key from environment
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# default to the public 1.5 flash model used in main.py
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 
 SYSTEM_PROMPT = """
 You are an automation planner for a local desktop assistant called Jarvis-AI.
@@ -70,11 +81,10 @@ def get_plan(user_text: str) -> Plan:
         return _dummy_plan()
 
     try:
+        # Build endpoint and auth
         gemini_url = (
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+            f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
         )
-
-        headers = {"Content-Type": "application/json"}
 
         payload = {
             "contents": [
@@ -86,12 +96,46 @@ def get_plan(user_text: str) -> Plan:
             ]
         }
 
+        # Choose auth method: service account (bearer) if GOOGLE_APPLICATION_CREDENTIALS present
+        google_creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        use_bearer = False
+        headers = {"Content-Type": "application/json"}
+
+        if google_creds_path and _HAS_GOOGLE_AUTH:
+            try:
+                creds = service_account.Credentials.from_service_account_file(
+                    google_creds_path,
+                    scopes=["https://www.googleapis.com/auth/cloud-platform"],
+                )
+                creds.refresh(GoogleRequest())
+                headers["Authorization"] = f"Bearer {creds.token}"
+                use_bearer = True
+            except Exception as e:
+                print("[gpt_client] Failed to obtain bearer token from service account:", repr(e))
+
+        # If no bearer token, fall back to using API key in query param (if provided)
+        request_url = gemini_url
+        if not use_bearer:
+            if not GEMINI_API_KEY:
+                print("[gpt_client] Missing GEMINI_API_KEY and no service account available — using dummy plan.")
+                return _dummy_plan()
+            request_url = f"{gemini_url}?key={GEMINI_API_KEY}"
+
         response = requests.post(
-            f"{gemini_url}?key={GEMINI_API_KEY}",
+            request_url,
             headers=headers,
             json=payload,
             timeout=20,
         )
+
+        # Helpful debug information when things go wrong
+        if response.status_code != 200:
+            try:
+                body = response.text
+            except Exception:
+                body = "<unreadable response body>"
+            print(f"[gpt_client] Gemini API returned status {response.status_code}: {body}")
+            return _dummy_plan()
 
         data = response.json()
 
@@ -101,13 +145,27 @@ def get_plan(user_text: str) -> Plan:
             print("[gpt_client] Empty Gemini response, falling back to dummy plan.")
             return _dummy_plan()
 
-        # Try parsing JSON
+        # Sanitize common wrappers (markdown fences, code blocks) and extract JSON object
+        # Remove triple-backtick fences if present
+        content_clean = re.sub(r"^```(?:json)?\s*", "", content.strip(), flags=re.IGNORECASE)
+        content_clean = re.sub(r"\s*```$", "", content_clean)
+
+        # If still not valid JSON, try to extract the first {...} object
         try:
-            json_data = json.loads(content)
+            json_data = json.loads(content_clean)
             return Plan(**json_data)
         except json.JSONDecodeError:
-            print("[gpt_client] Invalid JSON from Gemini, falling back.")
-            return _dummy_plan()
+            m = re.search(r"(\{[\s\S]*\})", content_clean)
+            if m:
+                try:
+                    json_data = json.loads(m.group(1))
+                    return Plan(**json_data)
+                except Exception:
+                    print("[gpt_client] Extracted block is not valid JSON — falling back.")
+                    return _dummy_plan()
+            else:
+                print("[gpt_client] Invalid JSON from Gemini, falling back.")
+                return _dummy_plan()
 
     except Exception as e:
         print("[gpt_client] Gemini API error:", repr(e))

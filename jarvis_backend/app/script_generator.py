@@ -33,7 +33,18 @@ def generate_ahk_v2(plan: Plan) -> str:
 Run "chrome.exe {url}"
 '''
     elif intent == "open_app":
-        app = args.get("app_name", "notepad.exe")
+        # Prefer a platform-agnostic app identifier if provided
+        app = args.get("app_id") or args.get("app_name") or "notepad.exe"
+        app_low = (str(app) or "").lower()
+
+        # Special-case Visual Studio Code to use the 'code' CLI (common on Windows)
+        if "code" in app_low or "vscode" in app_low or "visual studio" in app_low:
+            # Try opening via the 'code' CLI; if not available, users can configure their PATH
+            return f'''
+Run "code"
+'''
+
+        # Default: run the provided app string directly
         return f'''
 Run "{app}"
 '''
