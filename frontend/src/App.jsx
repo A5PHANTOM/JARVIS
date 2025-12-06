@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-const BASE_URL = "https://liftable-actionable-joeann.ngrok-free.dev";
+// Point frontend API calls to the local FastAPI backend during development
+const BASE_URL = "http://127.0.0.1:8000";
 const COMMAND_URL = `${BASE_URL}/command`;
 const CHAT_URL = `${BASE_URL}/chat`;
 
@@ -28,6 +29,7 @@ function App() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState(null);
   const [showIntro, setShowIntro] = useState(true);
   const messagesEndRef = useRef(null);
 
@@ -116,6 +118,16 @@ function App() {
     return false;
   };
 
+  // Simple client-side platform hint for the backend (mac/windows/linux)
+  const detectPlatform = () => {
+    const p = (navigator?.platform || "").toLowerCase();
+    const ua = (navigator?.userAgent || "").toLowerCase();
+    if (p.includes("mac") || ua.includes("mac os") || ua.includes("iphone") || ua.includes("ipad")) return "mac";
+    if (p.includes("win") || ua.includes("windows")) return "windows";
+    if (p.includes("linux") || ua.includes("x11")) return "linux";
+    return undefined;
+  };
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -129,21 +141,24 @@ function App() {
       { from: "you", text: userText, timestamp: now },
     ]);
 
-    // Handle small talk locally
-    if (tryHandleLocally(userText)) return;
+      // Send everything to backend (Gemini will decide whether to reply or return an automation plan)
 
     setIsLoading(true);
 
-    try {
-      // 🔥 Decide which backend endpoint to hit
-      const endpoint = isAutomationCommand(userText)
-        ? COMMAND_URL
-        : CHAT_URL;
+    // short-circuit some small-talk locally
+    if (tryHandleLocally(userText)) {
+      setIsLoading(false);
+      return;
+    }
 
-      const res = await fetch(endpoint, {
+    try {
+      // First request plan-only (do not execute). Backend will return either a chat reply or a generated script.
+      const payload = { text: userText, platform: detectPlatform(), execute: false };
+
+      const res = await fetch(COMMAND_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: userText }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -189,6 +204,16 @@ function App() {
       }
 
       setMessages((prev) => [...prev, ...jarvisMsgs]);
+
+      // If backend returned a generated script (script_path) and actions that are not just a reply, show confirmation
+      const hasScript = data && data.script_path;
+      const hasActions = Array.isArray(data?.actions) && data.actions.length > 0;
+      const onlyReply = hasActions && data.actions.length === 1 && data.actions[0] === "reply";
+
+      if (hasScript && hasActions && !onlyReply) {
+        // store the response for the modal flow and do NOT execute yet
+        setPendingPlan({ requestText: userText, response: data });
+      }
 
       if (primaryText && "speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(primaryText);
