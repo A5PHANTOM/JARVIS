@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-// Point frontend API calls to the local FastAPI backend during development
-const BASE_URL = "http://127.0.0.1:8000";
+const BASE_URL = "https://liftable-actionable-joeann.ngrok-free.dev";
 const COMMAND_URL = `${BASE_URL}/command`;
 const CHAT_URL = `${BASE_URL}/chat`;
 
@@ -130,7 +129,8 @@ function App() {
       { from: "you", text: userText, timestamp: now },
     ]);
 
-      // Send everything to backend (Gemini will decide whether to reply or return an automation plan)
+    // Handle small talk locally
+    if (tryHandleLocally(userText)) return;
 
     setIsLoading(true);
 
